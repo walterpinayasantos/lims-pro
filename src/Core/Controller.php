@@ -4,66 +4,92 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+/**
+ * Class Controller
+ * Clase base para todos los controladores del LIMS.
+ * Maneja la inicialización de sesiones, renderizado de vistas y respuestas JSON.
+ */
 class Controller
 {
     /**
-     * Renderiza una vista dentro de un layout.
-     * * @param string $view   Nombre de la vista (ej: 'auth/login', 'dashboard/index')
-     * @param array  $data   Datos a pasar a la vista (ej: ['title' => 'Bienvenido'])
-     * @param string|null $layout Nombre del layout a usar (ej: 'main', 'auth'). Null para sin layout.
+     * Constructor Base
+     * Se ejecuta automáticamente al llamar parent::__construct() en los hijos.
      */
-    protected function render(string $view, array $data = [], ?string $layout = 'main'): void
+    public function __construct()
     {
-        // 1. Extraer los datos para que sean variables nativas en la vista
-        // Ej: ['user' => 'Juan'] se convierte en la variable $user = 'Juan'
-        extract($data);
-
-        // 2. Definir la ruta física del contenido interno (La "carne" del sándwich)
-        // Asumimos que todas las vistas de página están en src/Views/pages/
-        $contentPath = APP_PATH . "src/Views/pages/{$view}.php";
-
-        // Verificación de seguridad para desarrollo
-        if (!file_exists($contentPath)) {
-            $this->stopCheck("Error LIMS: La vista <b>{$view}</b> no existe en:<br><code>{$contentPath}</code>");
+        // 1. Gestión Centralizada de Sesiones
+        // Vital para que $_SESSION funcione en PatientController y en todo el sistema.
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
         }
 
-        // 3. Renderizado
+        // Aquí a futuro agregaremos validación de Auth (Login) global.
+    }
+
+    /**
+     * Renderiza una vista dentro de un layout (Wrapper V2 con Assets).
+     * * @param string $viewPath Ruta de la vista relativa a 'pages/' (ej: 'patients/index')
+     * @param array  $data     Datos a pasar a la vista (ej: ['user' => ...])
+     * @param string|null $layout Nombre del layout (ej: 'main'). Null para vista cruda.
+     * @param array  $extra_css Archivos CSS adicionales para este módulo.
+     * @param array  $extra_js  Archivos JS adicionales para este módulo.
+     */
+    protected function render(string $viewPath, array $data = [], ?string $layout = 'main', array $extra_css = [], array $extra_js = []): void
+    {
+        // 1. Extraer datos (convierte claves de array en variables)
+        extract($data);
+
+        // 2. Definir rutas físicas
+        // Usamos APP_PATH si está definido, sino calculamos ruta relativa
+        $baseDir = defined('APP_PATH') ? APP_PATH : dirname(__DIR__, 2) . '/';
+        $contentPath = $baseDir . "src/Views/pages/{$viewPath}.php";
+
+        // 3. Validar existencia de la vista
+        if (!file_exists($contentPath)) {
+            $this->stopCheck("Error 404 LIMS: La vista <b>{$viewPath}</b> no existe en:<br><code>{$contentPath}</code>");
+        }
+
+        // 4. Renderizado
         if ($layout) {
-            // Si hay layout, buscamos el archivo "envoltorio"
-            $layoutPath = APP_PATH . "src/Views/layouts/{$layout}.php";
+            $layoutPath = $baseDir . "src/Views/layouts/{$layout}.php";
 
             if (file_exists($layoutPath)) {
-                // El layout se encarga de hacer 'require_once $contentPath;' en su interior
+                // El layout (main.php) tendrá acceso a $contentPath, $extra_js, $extra_css y todas las variables de $data
                 require_once $layoutPath;
             } else {
-                $this->stopCheck("Error LIMS: El layout <b>{$layout}</b> no existe en:<br><code>{$layoutPath}</code>");
+                $this->stopCheck("Error Crítico: El layout <b>{$layout}</b> no existe en:<br><code>{$layoutPath}</code>");
             }
         } else {
-            // Si no hay layout (ej: modal content), cargamos directo la vista
+            // Renderizado sin layout (para modales o HTML parcial)
             require_once $contentPath;
         }
     }
 
     /**
-     * Helper para devolver respuestas JSON estandarizadas (API / AJAX).
+     * Helper para devolver respuestas JSON estandarizadas (AJAX/API).
+     * Detiene la ejecución del script inmediatamente después de imprimir.
      */
     protected function jsonResponse(array $payload, int $statusCode = 200): void
     {
-        header('Content-Type: application/json');
+        // Limpiar cualquier output previo (espacios en blanco, warnings)
+        if (ob_get_length()) ob_clean();
+
+        header('Content-Type: application/json; charset=utf-8');
         http_response_code($statusCode);
-        echo json_encode($payload);
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
     }
 
     /**
-     * Helper privado para detener la ejecución con estilo (Solo desarrollo)
+     * Helper de depuración para desarrollo.
      */
     private function stopCheck(string $message): void
     {
-        echo "<div style='background:#f8d7da; color:#721c24; padding:20px; border:1px solid #f5c6cb; font-family:sans-serif; margin:20px;'>";
-        echo "<h3>LIMS System Halt</h3>";
-        echo "<p>{$message}</p>";
-        echo "</div>";
+        echo "<div style='background:#f8d7da; color:#721c24; padding:20px; margin:20px; border:1px solid #f5c6cb; border-radius:5px; font-family:sans-serif;'>
+                <h3>Excepción de Arquitectura LIMS</h3>
+                <p>{$message}</p>
+                <small>Verifique la estructura de directorios en <code>src/Views/</code></small>
+              </div>";
         exit;
     }
 }

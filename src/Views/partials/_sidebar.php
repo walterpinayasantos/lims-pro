@@ -33,7 +33,7 @@
             <li class="side-nav-title">Gestión Médica</li>
 
             <li class="side-nav-item">
-                <a href="<?= BASE_URL ?>patients" class="side-nav-link">
+                <a href="<?= BASE_URL ?>patient" class="side-nav-link">
                     <i class="ti ti-users"></i>
                     <span class="menu-text"> Pacientes </span>
                 </a>
