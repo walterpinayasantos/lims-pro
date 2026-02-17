@@ -1,0 +1,16 @@
+# Ignorar librerías de terceros (se instalan con composer install)
+/vendor/
+
+# Ignorar archivos de entorno (TIENEN CLAVES SECRETAS)
+.env
+
+# Ignorar carpeta de configuración del IDE (opcional)
+.idea/
+.vscode/
+
+# Ignorar archivos de sistema
+Thumbs.db
+.DS_Store
+
+# Ignorar uploads de prueba (imágenes de usuarios, etc)
+/public/assets/uploads/

@@ -1,0 +1,21 @@
+<IfModule mod_rewrite.c>
+    Options -MultiViews
+    RewriteEngine On
+
+    # Eliminamos RewriteBase para que sea portátil entre carpetas
+    # Apache detectará la ruta relativa automáticamente
+
+    # 1. Si el archivo o directorio existe físicamente, no hagas nada (L = Last)
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # 2. Rutas Amigables: Envía todo lo demás a index.php
+    # Usamos QSA para mantener variables extras en la URL si fueran necesarias
+    RewriteRule ^(.*)$ index.php?route=$1 [QSA,L]
+    
+    # 3. Seguridad Senior
+    <FilesMatch "^\.">
+        Require all denied
+    </FilesMatch>
+</IfModule>
