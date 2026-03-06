@@ -9,18 +9,54 @@ use PDO;
 
 class Model
 {
-    /**
-     * @var PDO
-     * Propiedad protegida para que las clases hijas (User, Patient) puedan usarla.
-     */
     protected PDO $db;
+    protected string $table = ''; // Propiedad para definir la tabla en el hijo
 
     public function __construct()
     {
-        // 1. Instanciamos la clase de Configuración de Base de Datos
         $database = new Database();
-
-        // 2. Obtenemos la conexión PDO y la guardamos en la propiedad $db
         $this->db = $database->getConnection();
+    }
+
+    /**
+     * Busca un registro por su ID
+     */
+    public function find(int $id): ?array
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['id' => $id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $result ?: null;
+    }
+
+    /**
+     * Obtiene todos los registros de la tabla
+     */
+    public function all(): array
+    {
+        $sql = "SELECT * FROM {$this->table}";
+        return $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+        // Añade esto a tu archivo src/Core/Model.php
+
+    /**
+     * Actualiza un registro de forma genérica
+     */
+    public function update(int $id, array $data): bool
+    {
+        $fields = '';
+        foreach ($data as $key => $value) {
+            $fields .= "{$key} = :{$key}, ";
+        }
+        $fields = rtrim($fields, ', ');
+
+        $sql = "UPDATE {$this->table} SET {$fields} WHERE id = :id";
+        $data['id'] = $id; // Añadimos el ID al array de ejecución
+
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute($data);
     }
 }
